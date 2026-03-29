@@ -1008,8 +1008,10 @@ const MealPlanner = () => {
         return;
       }
       const meals = [];
+      const mains = filteredRecipes.filter(r => r.category === 'Main' || r.category === 'Pasta');
+      const pool = mains.length > 0 ? mains : filteredRecipes;
       for (let i = 0; i < mealsPerDay; i++) {
-        const randomRecipe = filteredRecipes[Math.floor(Math.random() * filteredRecipes.length)];
+        const randomRecipe = pool[Math.floor(Math.random() * pool.length)];
         meals.push(randomRecipe);
       }
       newPlan[day] = meals;
