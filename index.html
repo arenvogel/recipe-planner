@@ -1,0 +1,1407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Weekly Meal Planner</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+const { useState, useMemo, useCallback, useEffect } = React;
+
+const RECIPES = [
+  // Mains / Entrees
+  {
+    id: 1, name: 'Roasted Sweet Potato with Miso-Tahini Sauce', category: 'Main', cuisine: 'Asian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 35,
+    ingredients: ['2 large sweet potatoes', '2 tbsp white miso paste', '2 tbsp tahini', '1 tbsp rice vinegar', '1 tbsp maple syrup', '1 tbsp warm water', 'sesame seeds', 'scallions'],
+    instructions: [
+      'Preheat oven to 425°F. Halve sweet potatoes lengthwise and score the flesh in a crosshatch pattern.',
+      'Drizzle with olive oil, season with salt and pepper. Place cut-side down on a lined baking sheet.',
+      'Roast 25-30 minutes until fork-tender and caramelized.',
+      'Whisk together miso, tahini, rice vinegar, maple syrup, and warm water until smooth.',
+      'Flip sweet potatoes cut-side up, drizzle generously with miso-tahini sauce.',
+      'Garnish with sesame seeds and sliced scallions. Serve warm.'
+    ]
+  },
+  {
+    id: 2, name: 'Charred Scallion Steak', category: 'Main', cuisine: 'Asian', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['2 strip steaks (about 8 oz each)', '2 bunches scallions', '2 tbsp soy sauce', '1 tbsp sesame oil', '1 tsp rice vinegar', '1 clove garlic, minced', 'black pepper'],
+    instructions: [
+      'Pat steaks dry and season generously with salt and pepper. Let sit at room temperature 15 minutes.',
+      'Heat a cast iron skillet over high heat until smoking. Sear steaks 4 minutes per side for medium-rare.',
+      'Rest steaks on a cutting board 5 minutes.',
+      'In the same hot skillet, add whole scallions and char 2-3 minutes, turning once, until blistered.',
+      'Whisk together soy sauce, sesame oil, rice vinegar, and garlic for a quick dressing.',
+      'Slice steak against the grain, top with charred scallions, and drizzle with dressing.'
+    ]
+  },
+  {
+    id: 3, name: 'Coconut Lime Shrimp Noodles', category: 'Main', cuisine: 'Thai', protein: 'Shrimp', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['1 can coconut milk', '2 limes', '1 tbsp fish sauce', '8 oz rice noodles', '2 tbsp peanuts, crushed', 'fresh cilantro', 'fresh mint', '1 cup chopped veggies', '1 hot pepper, sliced', '1 shallot, sliced', '1 tbsp brown sugar', '1/2 lb shrimp, peeled'],
+    instructions: [
+      'Cook rice noodles according to package directions. Drain and set aside.',
+      'Heat oil in a large skillet over medium-high. Sauté shallot and hot pepper 2 minutes.',
+      'Add shrimp and cook 2-3 minutes per side until pink. Remove and set aside.',
+      'Pour in coconut milk, fish sauce, brown sugar, and juice of 1 lime. Simmer 3 minutes.',
+      'Add chopped veggies and cook 2 minutes. Return shrimp and add noodles, tossing to coat.',
+      'Serve topped with crushed peanuts, cilantro, mint, and lime wedges.'
+    ]
+  },
+  {
+    id: 4, name: 'Chicken Shawarma Bowl', category: 'Main', cuisine: 'Middle Eastern', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 lb chicken shawarma (pre-marinated or seasoned chicken thighs)', '1 onion, sliced', '1 bell pepper, sliced', '1/2 cup hummus', '1 cup cooked rice', 'pickled turnips (optional)', 'pita bread'],
+    instructions: [
+      'If using raw seasoned chicken, cook in a hot skillet with oil over medium-high heat for 5-6 minutes per side until done. Slice thinly.',
+      'In the same pan, sauté sliced onions and peppers 4-5 minutes until softened and charred.',
+      'Warm the rice and divide between two bowls.',
+      'Top with sliced shawarma chicken, sautéed onions and peppers.',
+      'Add a generous scoop of hummus to each bowl.',
+      'Serve with warm pita and pickled turnips if desired.'
+    ]
+  },
+  {
+    id: 5, name: 'Creamy Lemon Orzo', category: 'Main', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 cup orzo', '1/2 can coconut milk (or heavy cream)', '1/4 cup grated parmesan', '1 medium zucchini, diced', 'zest of 1 lemon', '2 cups fresh spinach', '2 cloves garlic, minced', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Cook orzo in salted boiling water according to package directions. Reserve 1/2 cup pasta water before draining.',
+      'Heat olive oil in a large skillet over medium. Sauté garlic 30 seconds, then add diced zucchini and cook 4 minutes.',
+      'Add spinach and stir until just wilted, about 1 minute.',
+      'Add drained orzo, coconut milk, parmesan, and lemon zest. Toss together, adding pasta water as needed for creaminess.',
+      'Season with salt and pepper. Serve with extra parmesan and a squeeze of lemon.'
+    ]
+  },
+  {
+    id: 6, name: 'Mojo Meatballs', category: 'Main', cuisine: 'Latin', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 40,
+    ingredients: ['1 lb ground beef', '1 cup cooked rice', '1 ripe mango, diced', 'fresh cilantro', '1/2 red onion, diced', '2 cloves garlic', '1/4 cup orange juice', '2 tbsp lime juice', '1 tsp cumin', 'salt and pepper'],
+    instructions: [
+      'Preheat oven to 400°F. Mix ground beef with 1 minced garlic clove, cumin, salt, and pepper.',
+      'Form into 12-14 meatballs and place on a lined baking sheet.',
+      'Bake 18-20 minutes until cooked through and browned.',
+      'Make mojo sauce: blend orange juice, lime juice, remaining garlic, and a handful of cilantro.',
+      'Make mango salsa: toss diced mango, red onion, cilantro, and a squeeze of lime.',
+      'Serve meatballs over rice, drizzled with mojo sauce and topped with mango salsa.'
+    ]
+  },
+  {
+    id: 7, name: 'Poached Salmon', category: 'Main', cuisine: 'Mediterranean', protein: 'Salmon', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['2 salmon fillets (6 oz each)', 'mixed greens', '1 head broccoli, cut into florets', '1 lemon', '1/2 cup white wine or water', 'fresh dill', 'salt and pepper', 'olive oil'],
+    instructions: [
+      'In a wide skillet, bring white wine (or water), lemon slices, dill sprigs, and a pinch of salt to a gentle simmer.',
+      'Add salmon fillets skin-side down. Cover and poach on low heat 10-12 minutes until just cooked through.',
+      'Meanwhile, steam or blanch broccoli florets 4-5 minutes until bright green and tender-crisp.',
+      'Arrange greens on plates. Place poached salmon and broccoli on top.',
+      'Drizzle with olive oil and a squeeze of lemon. Season with salt and pepper.'
+    ]
+  },
+  {
+    id: 8, name: 'Tacos', category: 'Main', cuisine: 'Mexican', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['1 lb cooked chicken (shredded or diced)', 'corn tortillas', '1 cup shredded cabbage', 'pickled red onions', 'fresh cilantro', '1 avocado, sliced', 'lime wedges', 'hot sauce'],
+    instructions: [
+      'Warm chicken in a skillet with a splash of water or broth, seasoning with salt, cumin, and chili powder.',
+      'Char corn tortillas directly over a gas flame or in a dry skillet, about 30 seconds per side.',
+      'Layer tortillas with chicken, shredded cabbage, pickled onions, avocado slices, and cilantro.',
+      'Squeeze fresh lime over each taco. Add hot sauce to taste.',
+      'Serve immediately with extra lime wedges on the side.'
+    ]
+  },
+  {
+    id: 9, name: 'Miso-Ginger Broccoli & Shrimp Stir Fry', category: 'Main', cuisine: 'Asian', protein: 'Shrimp', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['1/2 lb shrimp, peeled and deveined', '2 tbsp white miso paste', '1 large head broccoli, cut into florets', '1 inch fresh ginger, minced', '2 cloves garlic, minced', '1 tbsp soy sauce', '1 tsp sesame oil', 'cooked rice'],
+    instructions: [
+      'Whisk miso paste with 2 tbsp warm water, soy sauce, and sesame oil. Set aside.',
+      'Heat oil in a wok or large skillet over high heat. Stir-fry shrimp 2 minutes until pink. Remove.',
+      'Add broccoli florets with a splash of water. Cover and steam 3 minutes.',
+      'Uncover, add ginger and garlic, and stir-fry 1 minute until fragrant.',
+      'Return shrimp, pour in miso sauce, and toss everything to coat.',
+      'Serve immediately over steamed rice.'
+    ]
+  },
+  {
+    id: 10, name: "Sheet Pan Za'atar Chicken & Veggies", category: 'Main', cuisine: 'Middle Eastern', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 35,
+    ingredients: ['4 chicken thighs', '1 head broccoli, cut into florets', '1 red onion, wedged', '1 large sweet potato, cubed', '3 tbsp tahini', '2 tbsp za\'atar', 'olive oil', 'lemon', 'salt'],
+    instructions: [
+      'Preheat oven to 425°F. Toss sweet potato and broccoli with olive oil, salt, and 1 tbsp za\'atar on a sheet pan.',
+      'Rub chicken thighs with olive oil, remaining za\'atar, and salt. Nestle among the vegetables.',
+      'Add red onion wedges to the pan.',
+      'Roast 25-30 minutes until chicken reaches 165°F and vegetables are golden.',
+      'Drizzle tahini over everything and squeeze fresh lemon juice on top before serving.'
+    ]
+  },
+  {
+    id: 11, name: 'Peanut Sauce Noodles', category: 'Main', cuisine: 'Asian', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['8 oz linguine', '1/4 cup peanut sauce (or peanut butter + soy sauce + lime + sriracha)', '1 carrot, julienned', '1/2 cucumber, julienned', '1 cup cooked chicken, shredded', 'sesame seeds', 'scallions'],
+    instructions: [
+      'Cook linguine according to package directions. Drain, reserving 1/4 cup pasta water. Rinse under cold water.',
+      'If making sauce from scratch: whisk peanut butter, soy sauce, lime juice, sriracha, and a splash of warm water until smooth.',
+      'Toss cold noodles with peanut sauce, adding pasta water as needed for desired consistency.',
+      'Add shredded chicken, julienned carrot, and cucumber. Toss to combine.',
+      'Top with sesame seeds and sliced scallions. Serve cold or at room temperature.'
+    ]
+  },
+  {
+    id: 12, name: 'Summer Rolls', category: 'Main', cuisine: 'Asian', protein: 'Shrimp', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['8 rice paper wrappers', '1/2 lb cooked shrimp, halved', '2 carrots, julienned', 'fresh mint leaves', 'fresh cilantro', 'butter lettuce leaves', 'rice vermicelli (optional)', 'peanut dipping sauce'],
+    instructions: [
+      'If using vermicelli, cook per package directions, drain, and rinse with cold water.',
+      'Prep all fillings and arrange in an assembly line.',
+      'Dip one rice paper wrapper in warm water for 10-15 seconds until pliable (don\'t over-soak).',
+      'Lay on a clean surface. Place lettuce, carrots, herbs, vermicelli, and shrimp in the center.',
+      'Fold bottom up, tuck sides in, and roll tightly away from you.',
+      'Repeat with remaining wrappers. Serve with peanut dipping sauce.'
+    ]
+  },
+  {
+    id: 13, name: 'Spring Pasta', category: 'Main', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['8 oz pasta (any short shape)', '1/2 cup peas (fresh or frozen)', '2 cups chopped kale', '4 radishes, thinly sliced', 'fresh cilantro', 'fresh mint', 'fresh parsley', '1/4 cup grated parmesan', 'olive oil', 'lemon'],
+    instructions: [
+      'Cook pasta in salted water. Add peas in the last 2 minutes of cooking. Reserve 1/2 cup pasta water, then drain.',
+      'Toss hot pasta and peas with a generous glug of olive oil.',
+      'Add chopped kale (it will wilt from the heat), sliced radishes, and herbs.',
+      'Add parmesan and a squeeze of lemon. Toss, adding pasta water as needed.',
+      'Season with salt, pepper, and red pepper flakes. Serve warm or at room temperature.'
+    ]
+  },
+  {
+    id: 14, name: 'Beef Bulgogi Bowl', category: 'Main', cuisine: 'Korean', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['1 lb thinly sliced beef (rib-eye or sirloin)', '1 cup cooked rice', '2 baby bok choy, halved', '1 cup mushrooms, sliced', '2 tbsp white miso paste', '2 tbsp mirin', '1 tbsp gochujang', '2 tbsp soy sauce', '1 tbsp sesame oil', 'sesame seeds', 'scallions'],
+    instructions: [
+      'Marinate beef: mix soy sauce, mirin, sesame oil, gochujang, and 1 minced garlic clove. Toss with beef for at least 15 minutes.',
+      'Heat a skillet over high heat. Sear marinated beef in batches, 2-3 minutes per side. Set aside.',
+      'In the same pan, sauté mushrooms until golden, about 4 minutes.',
+      'Steam or pan-sear bok choy cut-side down for 3 minutes until tender-crisp.',
+      'Whisk miso with a splash of warm water for a drizzle.',
+      'Assemble bowls: rice, beef, bok choy, mushrooms. Drizzle with miso sauce, top with sesame seeds and scallions.'
+    ]
+  },
+  {
+    id: 15, name: 'Tortellini Soup', category: 'Main', cuisine: 'Italian', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['9 oz fresh cheese tortellini', '2 cups red pepper tomato soup (jarred or homemade)', '2 cups fresh spinach', '2 Italian chicken sausage links, sliced', 'red pepper flakes', 'parmesan for serving', 'olive oil'],
+    instructions: [
+      'Heat olive oil in a large pot over medium. Brown sliced chicken sausage 4-5 minutes.',
+      'Add red pepper tomato soup and 1 cup water or broth. Bring to a simmer.',
+      'Add tortellini and cook per package directions (usually 3-5 minutes).',
+      'Stir in spinach and let it wilt, about 1 minute.',
+      'Season with red pepper flakes, salt, and pepper.',
+      'Ladle into bowls and top with grated parmesan.'
+    ]
+  },
+  {
+    id: 16, name: 'Fried Egg Bowl', category: 'Main', cuisine: 'Asian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['4 eggs', '2 cups cooked rice', '1 cup green beans, trimmed and halved', '2 tbsp chili oil (or chili crisp)', 'soy sauce', 'sesame seeds', 'scallions'],
+    instructions: [
+      'Blanch green beans in salted boiling water for 3 minutes. Drain and set aside.',
+      'Heat a non-stick skillet with a bit of oil over medium-high. Fry eggs sunny-side up, about 3 minutes, until whites are set but yolks are runny.',
+      'Divide warm rice between two bowls.',
+      'Top each with green beans and 2 fried eggs.',
+      'Drizzle generously with chili oil and a splash of soy sauce. Garnish with sesame seeds and scallions.'
+    ]
+  },
+  {
+    id: 17, name: 'Creamy Chicken Thighs', category: 'Main', cuisine: 'Mediterranean', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['4 bone-in chicken thighs', '4 cloves garlic, smashed', 'fresh parsley', 'red pepper flakes', '4 scallions, sliced', '1/2 cup heavy cream', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Season chicken thighs generously with salt, pepper, and red pepper flakes.',
+      'Heat olive oil in a large oven-safe skillet over medium-high. Sear chicken skin-side down 6-7 minutes until golden and crispy.',
+      'Flip and cook 3 more minutes. Remove chicken.',
+      'Lower heat, add garlic to the pan, cook 1 minute. Pour in heavy cream, scraping up any brown bits.',
+      'Return chicken to the pan. Transfer to a 375°F oven and bake 15 minutes until chicken is cooked through.',
+      'Garnish with fresh parsley and scallions. Serve with crusty bread or rice.'
+    ]
+  },
+  {
+    id: 18, name: 'Thai Halibut', category: 'Main', cuisine: 'Thai', protein: 'Fish', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['2 halibut fillets (6 oz each)', '1 can coconut milk', 'fresh cilantro', '2 small potatoes, diced', '1 tbsp chili oil', '1 poblano pepper, diced', '1 onion, diced', '1 tbsp fish sauce', 'lime'],
+    instructions: [
+      'Parboil diced potatoes in salted water 8 minutes until just tender. Drain.',
+      'Heat oil in a deep skillet over medium. Sauté onion and poblano 4 minutes until softened.',
+      'Pour in coconut milk and fish sauce. Add potatoes. Simmer 5 minutes.',
+      'Nestle halibut fillets into the broth. Cover and cook 10-12 minutes until fish flakes easily.',
+      'Drizzle with chili oil and squeeze lime juice over the top.',
+      'Garnish with fresh cilantro. Serve in shallow bowls with the broth.'
+    ]
+  },
+  {
+    id: 19, name: 'PB Asian Noodles', category: 'Main', cuisine: 'Asian', protein: 'Shrimp', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['3 tbsp peanut butter', '8 oz noodles (ramen or soba)', '1 carrot, shredded', '1/2 lb shrimp, peeled', '1 cup shredded cabbage', '2 scallions, sliced', 'fresh cilantro', '1 cup spinach', '1/2 cup edamame', '2 tbsp soy sauce', '1 tbsp rice vinegar', '1 tsp sesame oil', '1 tsp ginger, grated', '2 cloves garlic, minced', '1 tsp sriracha'],
+    instructions: [
+      'Cook noodles according to package. Drain and rinse with cold water.',
+      'Make sauce: whisk peanut butter, soy sauce, rice vinegar, sesame oil, ginger, garlic, sriracha, and 2 tbsp warm water.',
+      'Cook shrimp in a hot skillet 2-3 minutes per side until pink.',
+      'Toss noodles with sauce, then add cabbage, carrot, spinach, and edamame.',
+      'Top with shrimp, scallions, and cilantro. Serve cold or warm.'
+    ]
+  },
+  {
+    id: 20, name: 'Mushroom Quiche', category: 'Main', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Medium', servings: 2, prepTime: 50,
+    ingredients: ['4 eggs', '1/2 cup cottage cheese', '8 oz mushrooms, sliced', '1 small onion, diced', '1/2 cup shredded cheese', '2 tbsp flour', '1/4 cup crumbled feta', 'butter', 'salt and pepper'],
+    instructions: [
+      'Preheat oven to 375°F. Butter a 9-inch pie dish or small baking dish.',
+      'Sauté mushrooms and onion in butter over medium heat 6-8 minutes until golden and liquid has evaporated.',
+      'Whisk eggs, cottage cheese, flour, salt, and pepper until smooth.',
+      'Spread sautéed mushrooms in the baking dish. Pour egg mixture over.',
+      'Top with shredded cheese and crumbled feta.',
+      'Bake 30-35 minutes until set and golden on top. Let cool 5 minutes before slicing.'
+    ]
+  },
+  {
+    id: 21, name: 'Halal Style Rice', category: 'Main', cuisine: 'Middle Eastern', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['1 lb chicken thighs, cubed', '1.5 cups basmati rice', '1 tsp paprika', '1 tsp coriander', '1/2 tsp turmeric', '3 cloves garlic, minced', 'pinch red pepper flakes', 'butter lettuce', 'diced tomatoes', 'white sauce (mayo + yogurt + lemon + vinegar)'],
+    instructions: [
+      'Marinate chicken with paprika, coriander, turmeric, garlic, pepper flakes, lemon juice, and olive oil for at least 15 minutes.',
+      'Cook basmati rice with a pinch of turmeric and butter according to package directions.',
+      'Heat oil in a skillet over high heat. Cook chicken 6-8 minutes, turning, until charred and cooked through.',
+      'Make white sauce: mix equal parts mayo and yogurt with a squeeze of lemon and splash of white vinegar.',
+      'Plate turmeric rice with chicken on top. Serve with lettuce, tomatoes, white sauce, and hot sauce.'
+    ]
+  },
+  {
+    id: 22, name: 'Healthy Orange Chicken', category: 'Main', cuisine: 'Asian', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['1 lb chicken breast, cubed', '1 orange (juice and zest)', '2 tbsp soy sauce', '1 tbsp rice wine vinegar', '1 tsp sesame oil', '3 cloves garlic, minced', '1 tsp ginger, grated', '1 tbsp tomato paste', 'red pepper flakes', 'sesame seeds', '1 tbsp mirin', 'cornstarch', 'rice'],
+    instructions: [
+      'Toss chicken cubes in cornstarch with salt and pepper.',
+      'Heat oil in a skillet over medium-high. Cook chicken 5-6 minutes until golden and cooked through. Remove.',
+      'In the same pan, sauté garlic and ginger 30 seconds.',
+      'Add orange juice, zest, soy sauce, rice vinegar, sesame oil, tomato paste, mirin, and pepper flakes. Simmer 3 minutes until slightly thickened.',
+      'Return chicken to sauce and toss to coat.',
+      'Serve over rice, garnished with sesame seeds and scallions.'
+    ]
+  },
+  {
+    id: 23, name: 'Crumbled Asian Tofu', category: 'Main', cuisine: 'Asian', protein: 'Tofu', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 block extra-firm tofu, drained', '2 tbsp gochujang', '1 tbsp oyster sauce', '2 cups cooked rice', 'scallions, sliced', 'sesame seeds', 'sesame oil'],
+    instructions: [
+      'Press tofu for 10 minutes between towels to remove excess water.',
+      'Crumble tofu into small pieces with your hands.',
+      'Heat sesame oil in a non-stick skillet over high heat. Add crumbled tofu and cook undisturbed 4-5 minutes until edges are golden.',
+      'Stir, then add gochujang and oyster sauce. Cook 2-3 more minutes, tossing to coat.',
+      'Serve over rice, topped with scallions and sesame seeds.'
+    ]
+  },
+  {
+    id: 24, name: 'Lime Cilantro Chicken Salad', category: 'Salad', cuisine: 'Mexican', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['2 chicken thighs', '2 limes', 'bunch of cilantro', '4 cups arugula', '1 ear corn (or 1/2 cup frozen)', 'tortilla strips', '1 tbsp apple cider vinegar', '3 tbsp olive oil', '1 tsp maple syrup', 'salt and pepper'],
+    instructions: [
+      'Marinate chicken in lime juice, chopped cilantro, salt, and pepper for 10 minutes.',
+      'Grill or pan-sear chicken 5-6 minutes per side until cooked through. Let rest, then slice.',
+      'If using fresh corn, char the ear in a hot skillet or on a grill. Cut kernels off the cob.',
+      'Make dressing: whisk olive oil, apple cider vinegar, maple syrup, lime juice, and salt.',
+      'Toss arugula with dressing. Top with sliced chicken, corn, tortilla strips, and cilantro.'
+    ]
+  },
+  {
+    id: 25, name: 'Spiced Chickpea Tacos', category: 'Main', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 can chickpeas, drained', '1 cup shredded cabbage', 'fresh cilantro', '1 avocado, sliced', '1 cup arugula', 'small tortillas', '1 tsp cumin', '1 tsp paprika', '1/2 tsp chili powder', 'lime'],
+    instructions: [
+      'Drain and pat chickpeas dry. Toss with cumin, paprika, chili powder, olive oil, and salt.',
+      'Roast at 425°F for 20 minutes (or pan-fry over medium-high 8-10 minutes) until crispy.',
+      'Warm tortillas in a dry skillet.',
+      'Fill with arugula, spiced chickpeas, shredded cabbage, avocado, and cilantro.',
+      'Squeeze lime over each taco and serve.'
+    ]
+  },
+  {
+    id: 26, name: 'Mango Salsa and Tofu Teriyaki', category: 'Main', cuisine: 'Asian', protein: 'Tofu', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['1 block extra-firm tofu', '3 tbsp teriyaki sauce', '1 ripe mango, diced', 'fresh cilantro', '1 jalapeño, minced', '2 cups cooked rice', 'lime', 'sesame oil'],
+    instructions: [
+      'Press tofu 10 minutes, then cut into 1/2-inch slabs.',
+      'Heat sesame oil in a non-stick skillet over medium-high. Cook tofu 4 minutes per side until golden and crispy.',
+      'Add teriyaki sauce to the pan. Cook 1 minute, flipping tofu to glaze both sides.',
+      'Make mango salsa: toss diced mango, cilantro, minced jalapeño, and lime juice.',
+      'Serve glazed tofu over rice, topped with mango salsa.'
+    ]
+  },
+  {
+    id: 27, name: 'Spicy Tuna Salad with Crispy Rice', category: 'Salad', cuisine: 'Asian', protein: 'Fish', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['8 oz sushi-grade tuna, diced small', '1 cup cooked sushi rice (day-old works best)', '1/2 cucumber, diced', '2 tbsp soy sauce', '1 tsp sriracha', '1 tsp sesame oil', 'scallions', 'sesame seeds'],
+    instructions: [
+      'Form cold rice into small patties (about 2 inches each). Press firmly.',
+      'Pan-fry rice patties in oil over medium-high heat 3-4 minutes per side until golden and crispy. Set aside.',
+      'Mix diced tuna with soy sauce, sriracha, and sesame oil.',
+      'Top each crispy rice cake with a spoonful of spicy tuna.',
+      'Garnish with diced cucumber, scallions, and sesame seeds.'
+    ]
+  },
+  {
+    id: 28, name: 'Slow Roasted Sumac Salmon on Citrus', category: 'Main', cuisine: 'Mediterranean', protein: 'Salmon', difficulty: 'Medium', servings: 2, prepTime: 45,
+    ingredients: ['2 salmon fillets (6 oz each)', '1 tbsp sumac', '1 tbsp honey', 'fresh parsley', 'pinch cayenne', '1 tsp paprika', '2 cloves garlic, minced', 'zest of 1 lemon', '2 tbsp olive oil', '1 lemon, thinly sliced', '1 orange, thinly sliced'],
+    instructions: [
+      'Preheat oven to 300°F. Arrange lemon and orange slices on a lined baking sheet to form a bed.',
+      'Mix sumac, honey, paprika, cayenne, garlic, lemon zest, and olive oil into a paste.',
+      'Place salmon fillets on the citrus bed. Spread the sumac-honey paste over the top.',
+      'Slow-roast 25-30 minutes until salmon is just cooked through and flakes easily.',
+      'Garnish with fresh parsley. Serve on the citrus slices.'
+    ]
+  },
+  {
+    id: 29, name: 'Pesto with Red Chili Lemon and Peas', category: 'Main', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['8 oz pasta', '1/4 cup pesto', '1/2 tsp red chili flakes', '1 lemon (juice and zest)', '1 cup peas (fresh or frozen)', 'parmesan', 'olive oil'],
+    instructions: [
+      'Cook pasta in salted water. Add peas in the last 2 minutes. Reserve 1/2 cup pasta water, then drain.',
+      'Toss hot pasta and peas with pesto, adding pasta water to loosen.',
+      'Add red chili flakes, lemon juice, and lemon zest. Toss to combine.',
+      'Serve topped with grated parmesan and a drizzle of olive oil.'
+    ]
+  },
+  {
+    id: 30, name: 'Crispy Black Bean Tacos', category: 'Main', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 can black beans, drained', 'small tortillas', '1 cup shredded cabbage', 'fresh cilantro', '1 avocado, sliced', '1 lime', 'cumin', 'chili powder', 'olive oil'],
+    instructions: [
+      'Mash half the black beans roughly. Mix with whole beans, cumin, chili powder, and salt.',
+      'Heat oil in a skillet. Spread bean mixture in tortillas and fold. Pan-fry 2-3 minutes per side until crispy.',
+      'Alternatively, just warm seasoned beans and spoon into charred tortillas.',
+      'Top with shredded cabbage, avocado slices, cilantro, and a squeeze of lime.'
+    ]
+  },
+  {
+    id: 31, name: 'Chickpea Coconut Curry', category: 'Main', cuisine: 'Indian', protein: 'Vegan', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['1 can chickpeas, drained', '1 can coconut milk', '2 tbsp curry paste (or 1 tbsp curry powder)', '1 can diced tomatoes', '1 onion, diced', '3 cloves garlic, minced', '1 inch ginger, grated', 'cooked rice', 'cilantro'],
+    instructions: [
+      'Heat oil in a pot over medium. Sauté onion 5 minutes until softened.',
+      'Add garlic, ginger, and curry paste. Cook 1 minute until fragrant.',
+      'Add diced tomatoes and coconut milk. Stir and bring to a simmer.',
+      'Add chickpeas. Simmer 15-20 minutes until sauce thickens.',
+      'Season with salt and a squeeze of lime.',
+      'Serve over rice, garnished with fresh cilantro.'
+    ]
+  },
+  {
+    id: 32, name: 'Tomato Eggplant Lentil Stew', category: 'Main', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Medium', servings: 2, prepTime: 40,
+    ingredients: ['1 medium eggplant, cubed', '1/2 cup green or brown lentils', '1 can diced tomatoes', '1 onion, diced', '3 cloves garlic, minced', 'fresh herbs (parsley, thyme)', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Heat olive oil in a large pot. Sauté onion and garlic 4 minutes.',
+      'Add cubed eggplant and cook 5 minutes, stirring, until starting to soften.',
+      'Add lentils, diced tomatoes, 2 cups water, and herbs. Bring to a boil.',
+      'Reduce heat and simmer 25-30 minutes until lentils are tender.',
+      'Season with salt, pepper, and a drizzle of good olive oil. Serve with crusty bread.'
+    ]
+  },
+  {
+    id: 33, name: 'Middle Eastern Eggplant', category: 'Side', cuisine: 'Middle Eastern', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['2 medium eggplants', 'fresh dill', '1 tsp cumin', '1 tsp paprika', 'olive oil', 'salt', 'lemon'],
+    instructions: [
+      'Preheat oven to 425°F. Slice eggplant into 1/2-inch rounds.',
+      'Brush both sides with olive oil and season with cumin, paprika, and salt.',
+      'Roast on a sheet pan 20-25 minutes, flipping halfway, until golden and tender.',
+      'Squeeze lemon juice over warm eggplant and scatter with fresh dill.'
+    ]
+  },
+  {
+    id: 34, name: 'Chinese Red Snapper', category: 'Main', cuisine: 'Asian', protein: 'Fish', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['1 whole red snapper or 2 fillets', '3 tbsp soy sauce', '1 inch ginger, julienned', '4 scallions, julienned', '3 cloves garlic, sliced', 'cooked rice', 'sesame oil', 'vegetable oil'],
+    instructions: [
+      'Score the fish with 3 diagonal cuts on each side (if whole). Season with salt.',
+      'Steam the fish: place on a heatproof plate in a steamer or covered wok. Steam 12-15 minutes until flesh is opaque.',
+      'Drizzle soy sauce over the steamed fish. Top with julienned ginger and scallions.',
+      'Heat 2 tbsp vegetable oil until smoking and pour directly over the ginger and scallions to sizzle.',
+      'Finish with a drizzle of sesame oil. Serve immediately with steamed rice.'
+    ]
+  },
+  {
+    id: 35, name: 'Spatchcock Chicken', category: 'Main', cuisine: 'Mediterranean', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 50,
+    ingredients: ['1 whole chicken (3-4 lbs)', '1 lemon', '1 head garlic', 'fresh herbs (rosemary, thyme)', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Preheat oven to 450°F. Spatchcock the chicken: cut along both sides of the backbone with kitchen shears and remove it. Press flat.',
+      'Rub the chicken all over with olive oil, salt, pepper, and chopped herbs.',
+      'Halve the garlic head and lemon. Place in a roasting pan. Set chicken on top, skin-side up.',
+      'Roast 35-40 minutes until skin is golden and thigh reaches 165°F.',
+      'Let rest 10 minutes. Squeeze the roasted lemon and garlic over the chicken before carving.'
+    ]
+  },
+  {
+    id: 36, name: 'Coconut Shrimp Curry', category: 'Main', cuisine: 'Thai', protein: 'Shrimp', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['1/2 lb shrimp, peeled', '1 can coconut milk', '2 tbsp red or yellow curry paste', '1 cup mixed vegetables (bell pepper, snap peas, carrot)', '1 lime', 'cooked rice', 'cilantro', 'fish sauce'],
+    instructions: [
+      'Heat oil in a pot over medium. Fry curry paste 1 minute until fragrant.',
+      'Pour in coconut milk and 1 tbsp fish sauce. Stir and bring to a simmer.',
+      'Add vegetables and cook 5 minutes until tender-crisp.',
+      'Add shrimp and simmer 3-4 minutes until pink and curled.',
+      'Squeeze in lime juice and adjust seasoning.',
+      'Serve over rice, garnished with cilantro and lime wedges.'
+    ]
+  },
+  {
+    id: 37, name: 'Adana Meatballs', category: 'Main', cuisine: 'Middle Eastern', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['1 lb ground beef', 'Adana spice mix (cumin, sumac, Aleppo pepper, paprika)', '1 small onion, grated', 'fresh cilantro', '1 cup tomato sauce', 'salt', 'pita or flatbread'],
+    instructions: [
+      'Mix ground beef with grated onion, spices (2 tsp cumin, 1 tsp sumac, 1 tsp Aleppo pepper, 1 tsp paprika), and salt.',
+      'Form into oval kebab-shaped meatballs (about 12).',
+      'Grill, broil, or pan-fry over medium-high heat 4-5 minutes per side until cooked through.',
+      'Warm tomato sauce in a small pan.',
+      'Serve meatballs with tomato sauce, fresh cilantro, and warm pita or flatbread.'
+    ]
+  },
+  {
+    id: 38, name: 'Chow Fun', category: 'Main', cuisine: 'Asian', protein: 'Chicken', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['8 oz wide rice noodles (fresh if possible)', '1 chicken breast, thinly sliced', '2 cups mixed vegetables (bean sprouts, bok choy, scallions)', '2 tbsp soy sauce', '1 tbsp dark soy sauce', '2 cloves garlic, minced', '1 inch ginger, minced', 'vegetable oil'],
+    instructions: [
+      'If using dried noodles, soak in hot water until pliable (not fully cooked). Drain well.',
+      'Heat oil in a wok over high heat. Stir-fry chicken 3-4 minutes until cooked. Remove.',
+      'Add more oil, then stir-fry garlic and ginger 30 seconds.',
+      'Add noodles and both soy sauces. Toss vigorously, letting noodles get some char.',
+      'Add vegetables and chicken back. Toss 2 more minutes.',
+      'Serve immediately while hot and slightly smoky.'
+    ]
+  },
+  {
+    id: 39, name: 'Pomegranate Glazed Mushroom Steaks', category: 'Main', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['4 large portobello mushrooms', '3 tbsp pomegranate molasses', 'pomegranate seeds', 'fresh herbs (parsley, mint)', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Clean mushrooms and remove stems. Score the tops in a crosshatch pattern.',
+      'Brush with olive oil and season with salt and pepper.',
+      'Grill or roast at 400°F for 15 minutes, gill-side up.',
+      'Flip and brush generously with pomegranate molasses. Cook 5 more minutes.',
+      'Serve topped with pomegranate seeds and fresh herbs.'
+    ]
+  },
+  {
+    id: 40, name: 'Aloo Gobi', category: 'Main', cuisine: 'Indian', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['2 medium potatoes, cubed', '1/2 head cauliflower, cut into florets', '1 onion, diced', '1 can diced tomatoes', '1 tsp turmeric', '1 tsp cumin', '1 tsp garam masala', '1/2 tsp chili powder', 'cooked rice', 'cilantro'],
+    instructions: [
+      'Heat oil in a large pan over medium. Sauté onion 5 minutes until golden.',
+      'Add turmeric, cumin, garam masala, and chili powder. Stir 30 seconds.',
+      'Add potatoes and cauliflower. Toss to coat with spices.',
+      'Add diced tomatoes and 1/2 cup water. Cover and simmer 20 minutes, stirring occasionally, until vegetables are tender.',
+      'Season with salt. Serve over rice with fresh cilantro.'
+    ]
+  },
+  {
+    id: 41, name: 'Asian Shrimp', category: 'Main', cuisine: 'Asian', protein: 'Shrimp', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1/2 lb shrimp, peeled and deveined', '2 tbsp white miso paste', '1 tbsp mirin', '2 cloves garlic, minced', '1 tsp ginger, grated', 'cooked rice', 'scallions', 'sesame seeds'],
+    instructions: [
+      'Mix miso, mirin, garlic, and ginger into a marinade.',
+      'Toss shrimp in the marinade and let sit 5-10 minutes.',
+      'Heat a skillet over high heat. Cook shrimp 2-3 minutes per side until pink and slightly caramelized.',
+      'Serve over steamed rice with scallions and sesame seeds.'
+    ]
+  },
+  {
+    id: 42, name: 'Lemon Dill Rice and Chicken', category: 'Main', cuisine: 'Mediterranean', protein: 'Chicken', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['2 chicken breasts', '1.5 cups basmati rice', '1 lemon (juice and zest)', 'bunch of fresh dill, chopped', '2 tbsp butter', 'salt and pepper', 'chicken broth'],
+    instructions: [
+      'Cook rice in chicken broth with a knob of butter according to package directions.',
+      'Season chicken with salt, pepper, and lemon zest. Pan-sear in butter over medium-high, 5-6 minutes per side.',
+      'Let chicken rest 5 minutes, then slice.',
+      'Fluff rice with a fork. Stir in chopped dill, lemon juice, remaining zest, and a pat of butter.',
+      'Serve sliced chicken over lemon dill rice.'
+    ]
+  },
+  {
+    id: 43, name: 'Morty D Sand', category: 'Main', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 1, prepTime: 10,
+    ingredients: ['1 focaccia roll or slice', 'basil pesto', 'fresh ricotta', 'flaky salt', 'olive oil'],
+    instructions: [
+      'Slice focaccia in half horizontally. Toast lightly if desired.',
+      'Spread a generous layer of pesto on the bottom half.',
+      'Top with spoonfuls of fresh ricotta.',
+      'Drizzle with olive oil and sprinkle with flaky salt. Close sandwich and enjoy.'
+    ]
+  },
+  // Sides / Salads / Sauces
+  {
+    id: 44, name: 'Mixed Greens Salad Dressing', category: 'Sauce', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 4, prepTime: 10,
+    ingredients: ['1 shallot, minced', '1 clove garlic, minced', '1/3 cup olive oil', '2 tbsp lemon juice', '1 cup croutons', 'salt and pepper'],
+    instructions: [
+      'Mince shallot and garlic finely.',
+      'Whisk together olive oil, lemon juice, shallot, garlic, salt, and pepper.',
+      'Let sit 5 minutes so flavors meld.',
+      'Toss with mixed greens and top with croutons.'
+    ]
+  },
+  {
+    id: 45, name: 'Taco Black Beans', category: 'Side', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['1 can black beans (with liquid)', '1/2 onion, diced', '1 hot pepper, minced', '1 tsp cumin', 'salt', 'lime'],
+    instructions: [
+      'Heat oil in a pot. Sauté onion and hot pepper 4 minutes.',
+      'Add cumin and stir 30 seconds.',
+      'Add black beans with their liquid. Simmer 20 minutes until thickened and creamy.',
+      'Mash some beans against the side of the pot for thickness. Season with salt and lime juice.'
+    ]
+  },
+  {
+    id: 46, name: 'Corn Salsa', category: 'Sauce', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['1 cup frozen corn, thawed', 'zest of 1 lime', '2 tbsp lime juice', '1/2 cup diced pineapple', 'fresh cilantro, chopped', '1 jalapeño, minced', '1/4 red onion, finely diced'],
+    instructions: [
+      'If desired, char the corn in a dry skillet over high heat for extra flavor.',
+      'Combine corn, pineapple, jalapeño, onion, and cilantro in a bowl.',
+      'Add lime zest and lime juice. Toss gently.',
+      'Season with salt. Let sit 10 minutes before serving.'
+    ]
+  },
+  {
+    id: 47, name: 'Yum Nua (Beef Thai Salad)', category: 'Salad', cuisine: 'Thai', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['8 oz steak (flank or sirloin)', 'fresh cilantro', 'fresh mint', '1 shallot, thinly sliced', '1/2 cucumber, sliced', '1/2 cup green beans, blanched', '2 green onions, sliced', '3 tbsp lime juice', '1 stalk lemongrass, minced', '1 tbsp fish sauce', 'Thai chili'],
+    instructions: [
+      'Grill or sear steak over high heat to medium-rare, about 3-4 minutes per side. Rest 5 minutes, then slice thinly.',
+      'Blanch green beans in boiling water 2 minutes. Drain and cool.',
+      'Make dressing: mix lime juice, fish sauce, minced lemongrass, and sliced Thai chili.',
+      'Toss sliced steak, cucumber, green beans, shallot, and green onions with dressing.',
+      'Top with cilantro and mint. Serve immediately.'
+    ]
+  },
+  {
+    id: 48, name: 'Vinaigrette', category: 'Sauce', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 4, prepTime: 10,
+    ingredients: ['pinch red pepper flakes', '1 tbsp honey', '2 tbsp chopped fresh dill', '1/3 cup olive oil', '2 tbsp red wine vinegar', 'salt and pepper'],
+    instructions: [
+      'Whisk red wine vinegar, honey, and salt in a small bowl until honey dissolves.',
+      'Slowly drizzle in olive oil while whisking to emulsify.',
+      'Stir in dill and red pepper flakes.',
+      'Season with pepper. Store in a jar up to 1 week.'
+    ]
+  },
+  {
+    id: 49, name: 'Couscous Salad', category: 'Salad', cuisine: 'Middle Eastern', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 cup couscous', '1/4 cup crumbled feta', '1 cup cherry tomatoes, halved', '1 cup chopped kale', '1 carrot, shredded', '1 tsp za\'atar', '1 lemon', 'olive oil'],
+    instructions: [
+      'Prepare couscous: pour 1 cup boiling water over couscous, cover, and let sit 5 minutes. Fluff with a fork.',
+      'Massage chopped kale with olive oil and a pinch of salt until tender.',
+      'Toss couscous with kale, tomatoes, shredded carrot, and za\'atar.',
+      'Dress with lemon juice and olive oil. Top with crumbled feta.'
+    ]
+  },
+  {
+    id: 50, name: 'Grain Bowl', category: 'Main', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['1 cup grains (farro, quinoa, or brown rice)', 'assorted roasted vegetables', '1 sweet potato, cubed', '1 cup broccoli florets', 'pickled red onions', '1/2 can chickpeas, drained', '1 avocado, sliced', '2 tbsp tahini', '2 tbsp yogurt', 'lemon'],
+    instructions: [
+      'Cook grains according to package directions.',
+      'Roast sweet potato and broccoli at 425°F with olive oil and salt for 20-25 minutes.',
+      'Make tahini-yogurt sauce: whisk tahini, yogurt, lemon juice, and a splash of water.',
+      'Build bowls with grains, roasted veggies, chickpeas, avocado, and pickled onions.',
+      'Drizzle with tahini-yogurt sauce.'
+    ]
+  },
+  {
+    id: 51, name: 'Roasted Red Peppers in Vinaigrette', category: 'Side', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['3 red bell peppers', '2 tbsp red wine vinegar', '3 tbsp olive oil', 'pinch red pepper flakes', '1/2 tsp sumac', 'salt'],
+    instructions: [
+      'Broil whole peppers on a sheet pan, turning every 5 minutes, until charred all over (about 15 minutes).',
+      'Transfer to a bowl, cover with plastic wrap, and steam 10 minutes.',
+      'Peel, seed, and slice peppers into strips.',
+      'Toss with red wine vinegar, olive oil, red pepper flakes, sumac, and salt. Serve at room temperature.'
+    ]
+  },
+  {
+    id: 52, name: 'Whipped Turnip', category: 'Side', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['3 medium turnips, peeled and cubed', '2 tbsp heavy cream', '2 tbsp butter', 'chives, chopped', 'salt and white pepper'],
+    instructions: [
+      'Boil turnip cubes in salted water 15-18 minutes until very tender.',
+      'Drain well and return to pot.',
+      'Add butter and cream. Mash or blend with an immersion blender until smooth.',
+      'Season with salt and white pepper. Serve topped with chives.'
+    ]
+  },
+  {
+    id: 53, name: 'Herb Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['2 cups mixed fresh herbs (parsley, mint, dill, cilantro)', 'pomegranate seeds', '3 radishes, thinly sliced', '2 tbsp tahini', '1 tbsp balsamic vinegar', 'lemon', 'olive oil'],
+    instructions: [
+      'Pick herb leaves from stems. Toss gently in a bowl.',
+      'Add sliced radishes and pomegranate seeds.',
+      'Make dressing: whisk tahini, balsamic, lemon juice, and enough water to thin to a drizzle.',
+      'Drizzle over salad and toss gently just before serving.'
+    ]
+  },
+  {
+    id: 54, name: 'Artichoke Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 can artichoke hearts, drained and quartered', '1/4 red onion, thinly sliced', '1 cup cherry tomatoes, halved', '1 avocado, cubed', '1 lemon', '2 scallions, sliced', 'shaved parmesan', 'olive oil'],
+    instructions: [
+      'Arrange artichoke hearts, tomatoes, avocado, and red onion on a plate.',
+      'Dress with olive oil and fresh lemon juice.',
+      'Top with shaved parmesan and sliced scallions. Season with salt and pepper.'
+    ]
+  },
+  {
+    id: 55, name: 'Zaalouk', category: 'Side', cuisine: 'Moroccan', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 large eggplant', '2 tomatoes, diced', '3 cloves garlic, minced', 'fresh cilantro', '1 tsp paprika', '1 tsp cumin', 'olive oil', 'salt'],
+    instructions: [
+      'Roast or grill eggplant until completely soft and charred (about 20 minutes in a 450°F oven).',
+      'Scoop out the flesh and roughly chop.',
+      'In a pan, sauté garlic in olive oil. Add tomatoes, paprika, and cumin. Cook 5 minutes.',
+      'Add eggplant and mash together. Simmer 5 minutes.',
+      'Finish with cilantro and a drizzle of olive oil. Serve warm with bread.'
+    ]
+  },
+  {
+    id: 56, name: 'Harissa Eggplant', category: 'Side', cuisine: 'Middle Eastern', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 35,
+    ingredients: ['2 medium eggplants', '2 tbsp harissa paste', '3 tbsp olive oil', '1 tsp cumin', 'salt', 'yogurt (optional)', 'fresh herbs'],
+    instructions: [
+      'Preheat oven to 425°F. Halve eggplants lengthwise and score flesh.',
+      'Mix harissa, olive oil, and cumin. Brush over cut sides of eggplant.',
+      'Roast cut-side up 25-30 minutes until deeply golden and tender.',
+      'Serve with a drizzle of yogurt (if using) and fresh herbs.'
+    ]
+  },
+  {
+    id: 57, name: 'Korean Bean Sprouts', category: 'Side', cuisine: 'Korean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['2 cups bean sprouts', '1/2 tsp red pepper flakes (gochugaru)', '1 tsp sesame oil', '1 tsp sesame seeds', '1 clove garlic, minced', '2 scallions, sliced', 'salt'],
+    instructions: [
+      'Blanch bean sprouts in boiling water 1-2 minutes. Drain and squeeze out excess water.',
+      'Toss with sesame oil, garlic, red pepper flakes, and salt.',
+      'Garnish with sesame seeds and scallions. Serve cold or at room temperature.'
+    ]
+  },
+  {
+    id: 58, name: 'Charred Scallion Citrus Salsa', category: 'Sauce', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Medium', servings: 2, prepTime: 20,
+    ingredients: ['1 bunch scallions', '1/4 red onion, finely diced', '1 ripe mango, diced', '1 jalapeño, minced', 'fresh cilantro', '1 lemon', '2 tbsp olive oil'],
+    instructions: [
+      'Char whole scallions in a hot dry skillet until blistered, 3-4 minutes. Chop roughly.',
+      'Combine charred scallions, mango, red onion, jalapeño, and cilantro.',
+      'Dress with lemon juice, olive oil, and salt.',
+      'Let flavors marry 10 minutes. Serve with fish, chicken, or tacos.'
+    ]
+  },
+  {
+    id: 59, name: 'Peach Tomato Basil Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['2 ripe peaches, sliced', '2 large tomatoes, sliced', 'fresh basil leaves', '1 tbsp lemon juice', '1 tsp dijon mustard', '3 tbsp olive oil', '1 tsp honey', 'flaky salt'],
+    instructions: [
+      'Arrange peach and tomato slices on a plate, alternating.',
+      'Whisk together lemon juice, dijon, olive oil, and honey.',
+      'Drizzle dressing over the salad.',
+      'Scatter fresh basil leaves and finish with flaky salt.'
+    ]
+  },
+  {
+    id: 60, name: 'Tomatillo Salsa', category: 'Sauce', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['6 tomatillos, husked and halved', '1/2 onion, quartered', '1 jalapeño', '2 cloves garlic', 'fresh cilantro', '1 lime', 'salt'],
+    instructions: [
+      'Broil tomatillos, onion, jalapeño, and garlic on a sheet pan 8-10 minutes until charred.',
+      'Transfer everything to a blender or food processor.',
+      'Add cilantro, lime juice, and salt. Pulse until desired consistency.',
+      'Taste and adjust. Serve with chips, tacos, or grilled meats.'
+    ]
+  },
+  {
+    id: 61, name: 'Orzo Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 cup orzo', 'fresh basil, chopped', '1/2 cup lentils (cooked)', '1 small zucchini, diced', '2 scallions, sliced', '2 tbsp pistachios, chopped', '1 tbsp capers', 'olive oil', 'lemon'],
+    instructions: [
+      'Cook orzo in salted water. Drain and rinse under cold water.',
+      'Toss orzo with cooked lentils, diced zucchini, scallions, capers, and basil.',
+      'Dress with olive oil and lemon juice.',
+      'Top with chopped pistachios. Serve cold or at room temperature.'
+    ]
+  },
+  {
+    id: 62, name: 'Thyme Honey Carrots', category: 'Side', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 bunch carrots, halved lengthwise', 'fresh thyme sprigs', '2 tbsp honey', 'pinch chili flakes', '2 tbsp olive oil', 'salt'],
+    instructions: [
+      'Preheat oven to 425°F. Toss carrots with olive oil, honey, thyme, chili flakes, and salt.',
+      'Spread on a sheet pan in a single layer.',
+      'Roast 18-20 minutes until caramelized and tender.',
+      'Serve with extra thyme leaves and a drizzle of honey if desired.'
+    ]
+  },
+  {
+    id: 63, name: 'Shaved Carrot, Beet, Cabbage Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['2 carrots, shaved with a peeler', '1 medium beet, shaved or spiralized', '1 cup shredded cabbage', '1/4 cup cooked quinoa', 'mixed seeds (pumpkin, sunflower)', '2 tbsp tahini', '2 pitted dates, chopped', 'lemon'],
+    instructions: [
+      'Using a vegetable peeler, shave carrots and beets into ribbons.',
+      'Toss with shredded cabbage and quinoa.',
+      'Make dressing: blend tahini, lemon juice, chopped dates, and 2 tbsp water until smooth.',
+      'Drizzle dressing over salad and top with seeds.'
+    ]
+  },
+  {
+    id: 64, name: 'Snap Pea Salad', category: 'Salad', cuisine: 'Asian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['2 cups snap peas, strings removed', 'fresh mint leaves', '1 shallot, thinly sliced', 'fresh parsley', '1 lemon', 'crumbled feta', 'olive oil'],
+    instructions: [
+      'Blanch snap peas in boiling water 1 minute. Plunge into ice water and drain.',
+      'Halve snap peas on the diagonal.',
+      'Toss with shallot, mint, parsley, lemon juice, and olive oil.',
+      'Top with crumbled feta and serve.'
+    ]
+  },
+  {
+    id: 65, name: 'Greek Quinoa Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 cup quinoa, cooked', '2 cups baby spinach', '1/4 red onion, diced', '1/2 cucumber, diced', '1 cup cherry tomatoes, halved', 'crumbled feta', 'olive oil', 'lemon', 'oregano'],
+    instructions: [
+      'Fluff cooked quinoa and let cool slightly.',
+      'Toss with spinach, red onion, cucumber, and tomatoes.',
+      'Dress with olive oil, lemon juice, dried oregano, salt, and pepper.',
+      'Top with crumbled feta. Serve cold or at room temperature.'
+    ]
+  },
+  {
+    id: 66, name: 'Kale Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 bunch kale, stems removed and chopped', 'pumpkin seeds', '1/2 can white beans, drained', '1 avocado, cubed', 'hemp seeds', '1 lemon', '1 tsp dijon mustard', '1 tbsp maple syrup', '3 tbsp olive oil', 'salt'],
+    instructions: [
+      'Massage chopped kale with olive oil and a pinch of salt for 2 minutes until tender.',
+      'Make dressing: whisk lemon juice, dijon, maple syrup, and olive oil.',
+      'Toss kale with white beans, avocado, and dressing.',
+      'Top with pumpkin seeds and hemp seeds.'
+    ]
+  },
+  {
+    id: 67, name: 'Chopped Asparagus Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 bunch asparagus, trimmed and chopped', '1 lemon', '1/4 cup panko breadcrumbs', 'shaved parmesan', '2 tbsp olive oil', 'salt and pepper'],
+    instructions: [
+      'Toast breadcrumbs in a dry skillet until golden. Set aside.',
+      'Blanch chopped asparagus 2 minutes. Drain and cool in ice water.',
+      'Toss asparagus with olive oil, lemon juice, salt, and pepper.',
+      'Top with shaved parmesan and toasted breadcrumbs.'
+    ]
+  },
+  {
+    id: 68, name: 'Corn Parmesan Sauce', category: 'Sauce', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['2 ears corn (or 1.5 cups kernels)', '2 tbsp grated parmesan', '1 tbsp butter', '2 tbsp cream', 'salt and pepper'],
+    instructions: [
+      'Cut corn from cobs. Scrape cobs with the back of a knife to extract the milk.',
+      'Sauté corn in butter over medium heat 3 minutes.',
+      'Add cream and parmesan. Stir until melted and saucy.',
+      'Season with salt and pepper. Use over pasta, fish, or chicken.'
+    ]
+  },
+  {
+    id: 69, name: 'Alternative Panzanella', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 medium beet, roasted and cubed', '1 cucumber, chopped', 'fresh mint', '1/4 cup breadcrumbs or croutons', 'mixed seeds', '1 tbsp honey', '1 tsp dijon mustard', '2 tbsp white wine vinegar', 'crumbled feta', 'olive oil'],
+    instructions: [
+      'Roast beet wrapped in foil at 400°F for 40 minutes (or use pre-cooked). Cool and cube.',
+      'Toast breadcrumbs in a skillet with olive oil until crispy.',
+      'Whisk honey, mustard, vinegar, and olive oil for dressing.',
+      'Toss beet, cucumber, and mint with dressing.',
+      'Top with crispy breadcrumbs, seeds, and feta.'
+    ]
+  },
+  {
+    id: 70, name: 'Green Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 15,
+    ingredients: ['1 head butter lettuce, torn', '1/2 cucumber, sliced', '3 radishes, sliced', 'fresh mint', '2 stalks celery, sliced', '1/2 cup green grapes, halved', 'crumbled goat cheese', 'crumbled feta', '2 scallions, sliced', 'fresh dill'],
+    instructions: [
+      'Tear butter lettuce into pieces and place in a bowl.',
+      'Add cucumber, radishes, celery, grapes, and scallions.',
+      'Toss gently with a simple lemon-olive oil dressing.',
+      'Top with goat cheese, feta, mint, and dill.'
+    ]
+  },
+  {
+    id: 71, name: 'Deconstructed Burrata Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['1 ball burrata', 'mixed greens', '2 large tomatoes, sliced', 'fresh basil leaves', 'good olive oil', 'balsamic vinegar (or balsamic glaze)', 'flaky salt', 'pepper'],
+    instructions: [
+      'Arrange mixed greens on a plate.',
+      'Layer tomato slices over the greens.',
+      'Tear burrata open and place in the center, letting the creamy interior spill out.',
+      'Scatter basil leaves. Drizzle generously with olive oil and balsamic.',
+      'Finish with flaky salt and cracked pepper.'
+    ]
+  },
+  {
+    id: 72, name: 'Asian Steak Lettuce Wraps', category: 'Main', cuisine: 'Asian', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 25,
+    ingredients: ['8 oz steak (flank or skirt)', '1 head butter lettuce', '3 radishes, julienned', '1/2 cucumber, julienned', '1 carrot, julienned', 'fresh mint', '2 scallions, sliced', '2 tbsp gochujang sauce', 'rice vinegar', 'sesame oil'],
+    instructions: [
+      'Season steak with salt and pepper. Sear in a very hot skillet 3-4 minutes per side for medium-rare. Rest 5 minutes, then slice thinly.',
+      'Separate butter lettuce into cups.',
+      'Mix gochujang with a splash of rice vinegar and sesame oil for the sauce.',
+      'Fill lettuce cups with sliced steak, julienned veggies, mint, and scallions.',
+      'Drizzle with gochujang sauce.'
+    ]
+  },
+  {
+    id: 73, name: 'Chopped Brussels Salad', category: 'Salad', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['2 cups brussels sprouts, shaved or thinly sliced', '1 apple, diced', '1/2 cup halved grapes', 'vinaigrette (olive oil, lemon, dijon)', 'salt and pepper'],
+    instructions: [
+      'Shave brussels sprouts thinly using a mandoline or knife.',
+      'Toss with diced apple and halved grapes.',
+      'Dress with vinaigrette (whisk olive oil, lemon juice, and dijon mustard).',
+      'Season with salt and pepper. Let sit 5 minutes before serving so sprouts soften slightly.'
+    ]
+  },
+  {
+    id: 74, name: 'Lemon Basil Vinaigrette', category: 'Sauce', cuisine: 'Mediterranean', protein: 'Vegan', difficulty: 'Easy', servings: 4, prepTime: 10,
+    ingredients: ['1/4 cup fresh basil leaves', '1 small shallot, minced', '1 clove garlic, minced', '1/3 cup olive oil', '3 tbsp lemon juice', '1 tbsp white wine vinegar', 'pinch red pepper flakes', 'salt'],
+    instructions: [
+      'Finely chop basil leaves.',
+      'Whisk lemon juice, white wine vinegar, shallot, garlic, and salt.',
+      'Slowly drizzle in olive oil while whisking.',
+      'Stir in basil and red pepper flakes. Use immediately or store up to 3 days.'
+    ]
+  },
+  {
+    id: 75, name: 'Miso Scallion Dressing', category: 'Sauce', cuisine: 'Asian', protein: 'Vegetarian', difficulty: 'Easy', servings: 4, prepTime: 10,
+    ingredients: ['2 tbsp white miso paste', '3 scallions, finely chopped', '2 tbsp kewpie mayo', '2 tbsp lime juice', '1 tbsp warm water'],
+    instructions: [
+      'Whisk miso paste with warm water until smooth.',
+      'Add kewpie mayo and lime juice. Whisk until combined.',
+      'Stir in chopped scallions.',
+      'Use on salads, grain bowls, or as a dipping sauce.'
+    ]
+  },
+  {
+    id: 76, name: 'Honey Yogurt Crispy Sweet Potatoes', category: 'Side', cuisine: 'Mixed', protein: 'Vegetarian', difficulty: 'Medium', servings: 2, prepTime: 35,
+    ingredients: ['2 medium sweet potatoes, cubed', '1/2 cup yogurt', '2 tbsp honey', '1/2 tsp cinnamon', '2 tbsp nut butter (almond or peanut)', 'olive oil', 'salt'],
+    instructions: [
+      'Preheat oven to 425°F. Toss sweet potato cubes with olive oil, salt, and cinnamon.',
+      'Spread in a single layer on a sheet pan. Roast 25-30 minutes, tossing halfway, until crispy.',
+      'Whisk yogurt with honey and a pinch of salt.',
+      'Drizzle honey yogurt and nut butter over crispy sweet potatoes. Serve warm.'
+    ]
+  },
+  {
+    id: 77, name: 'Sushi Rice', category: 'Side', cuisine: 'Japanese', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 25,
+    ingredients: ['1 cup sushi rice', '2 tbsp rice vinegar', '1 tbsp sugar', '1/2 tsp salt'],
+    instructions: [
+      'Rinse rice in cold water until water runs clear (4-5 times).',
+      'Cook rice with 1.25 cups water. Bring to boil, then reduce to low, cover, and cook 15 minutes. Rest 10 minutes.',
+      'Mix rice vinegar, sugar, and salt until dissolved.',
+      'Gently fold vinegar mixture into hot rice using a cutting motion (don\'t stir). Fan the rice to cool slightly.'
+    ]
+  },
+  {
+    id: 78, name: 'Ramen Egg', category: 'Side', cuisine: 'Japanese', protein: 'Vegetarian', difficulty: 'Easy', servings: 1, prepTime: 15,
+    ingredients: ['2 eggs', '3 tbsp soy sauce', '2 tbsp mirin', '1/2 cup water'],
+    instructions: [
+      'Bring water to a boil. Gently lower eggs in and boil exactly 6.5 minutes for a jammy yolk.',
+      'Transfer immediately to an ice bath for 2 minutes. Peel carefully.',
+      'Mix soy sauce, mirin, and water in a container.',
+      'Submerge eggs in the marinade. Refrigerate at least 2 hours (overnight is best).',
+      'Halve and serve on ramen, rice bowls, or as a snack.'
+    ]
+  },
+  {
+    id: 79, name: 'Cilantro Sauce', category: 'Sauce', cuisine: 'Mexican', protein: 'Vegan', difficulty: 'Easy', servings: 4, prepTime: 10,
+    ingredients: ['1 large bunch cilantro (stems and leaves)', '1 lime, juiced', '2 cloves garlic', '1/4 cup olive oil', '1 jalapeño (seeded for less heat)', 'salt'],
+    instructions: [
+      'Add cilantro, lime juice, garlic, jalapeño, olive oil, and salt to a blender or food processor.',
+      'Blend until smooth, scraping down sides as needed.',
+      'Taste and adjust salt and lime. Thin with water if needed.',
+      'Use on tacos, bowls, grilled meats, or as a dip.'
+    ]
+  },
+  {
+    id: 80, name: 'Thai Steak Salad', category: 'Salad', cuisine: 'Thai', protein: 'Beef', difficulty: 'Medium', servings: 2, prepTime: 30,
+    ingredients: ['8 oz flank steak', 'fresh mint', 'fresh cilantro', '2 limes', '1 tbsp fish sauce', '4 cups salad greens', 'Thai chili', 'shallot, sliced', 'rice noodles (optional)'],
+    instructions: [
+      'Season steak with salt and pepper. Grill or sear over high heat 4 minutes per side for medium-rare. Rest 5 minutes.',
+      'Make dressing: whisk lime juice, fish sauce, sliced Thai chili, and a pinch of sugar.',
+      'Slice steak thinly against the grain.',
+      'Toss greens with dressing, mint, cilantro, and shallot.',
+      'Top with sliced steak. Serve with crispy rice noodles if desired.'
+    ]
+  },
+  {
+    id: 81, name: 'Asian Button Mushrooms', category: 'Side', cuisine: 'Asian', protein: 'Vegan', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['8 oz button mushrooms, halved', '2 tbsp soy sauce', '2 cloves garlic, minced', '1 tsp fresh ginger, grated', '1 tsp sesame oil', '2 scallions, sliced', 'vegetable oil'],
+    instructions: [
+      'Heat vegetable oil in a skillet over high heat. Add mushrooms cut-side down.',
+      'Cook undisturbed 4 minutes until deeply golden. Stir and cook 2 more minutes.',
+      'Add garlic and ginger, stir 30 seconds.',
+      'Add soy sauce and sesame oil. Toss to coat.',
+      'Serve topped with sliced scallions.'
+    ]
+  },
+  // Pastas
+  {
+    id: 82, name: 'White Wine Tomato Pasta', category: 'Pasta', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 30,
+    ingredients: ['8 oz pasta', '1/2 cup white wine', '1 pint cherry tomatoes', '2 cups kale, chopped', '1/2 cup ricotta', '3 cloves garlic, sliced', 'olive oil', 'red pepper flakes', 'parmesan'],
+    instructions: [
+      'Cook pasta in salted water. Reserve 1 cup pasta water before draining.',
+      'Heat olive oil in a large skillet. Add garlic and red pepper flakes, cook 1 minute.',
+      'Add cherry tomatoes and cook until they burst, about 5 minutes. Add white wine and simmer 2 minutes.',
+      'Add kale and stir until wilted.',
+      'Toss in pasta with 1/2 cup pasta water. Stir vigorously to create a sauce.',
+      'Serve with dollops of ricotta and grated parmesan.'
+    ]
+  },
+  {
+    id: 83, name: 'Greek Pasta Salad', category: 'Pasta', cuisine: 'Mediterranean', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['8 oz pasta (rotini or penne)', 'crumbled feta', '1 cup cherry tomatoes, halved', '1 cucumber, diced', '1/2 cup kalamata olives', 'olive oil', 'lemon', 'dried oregano'],
+    instructions: [
+      'Cook pasta. Drain and rinse under cold water.',
+      'Toss with tomatoes, cucumber, olives, and feta.',
+      'Dress with olive oil, lemon juice, oregano, salt, and pepper.',
+      'Serve cold. Tastes even better the next day.'
+    ]
+  },
+  {
+    id: 84, name: 'Morty D Pasta', category: 'Pasta', cuisine: 'Italian', protein: 'Vegetarian', difficulty: 'Easy', servings: 2, prepTime: 20,
+    ingredients: ['8 oz pasta (orecchiette or shells)', '1/4 cup pistachios, chopped', '1 ball burrata', '1 lemon', '1/4 cup castelvetrano olives, halved', 'olive oil', 'salt and pepper'],
+    instructions: [
+      'Cook pasta in well-salted water. Reserve 1/2 cup pasta water, drain.',
+      'Toss hot pasta with olive oil, lemon zest, and a squeeze of lemon juice.',
+      'Add halved olives and a splash of pasta water.',
+      'Plate and top with torn burrata and chopped pistachios.',
+      'Finish with flaky salt and cracked pepper.'
+    ]
+  },
+  // Snacks
+  {
+    id: 85, name: 'Protein Balls', category: 'Snack', cuisine: 'Mixed', protein: 'Vegan', difficulty: 'Easy', servings: 12, prepTime: 20,
+    ingredients: ['1 cup peanut butter', '1 cup rolled oats', '1/2 cup chocolate chips', '2 tbsp honey', '1 tbsp maple syrup', 'pinch of salt', '1 tsp vanilla (optional)'],
+    instructions: [
+      'Mix peanut butter, oats, chocolate chips, honey, maple syrup, salt, and vanilla in a bowl.',
+      'Stir until fully combined. If too dry, add a splash of milk. If too wet, add more oats.',
+      'Refrigerate the mixture 15 minutes to firm up.',
+      'Roll into 12 balls (about 1.5 inches each).',
+      'Store in the fridge up to a week. Great for meal prep snacking.'
+    ]
+  },
+];
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const CATEGORY_EMOJI = {
+  Main: '\u{1F37D}\uFE0F',
+  Side: '\u{1F957}',
+  Salad: '\u{1F959}',
+  Soup: '\u{1F372}',
+  Snack: '\u{1F37F}',
+  Sauce: '\u{1FAD2}',
+  Pasta: '\u{1F35D}',
+};
+
+const MealPlanner = () => {
+  const [activeTab, setActiveTab] = useState('recipes');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterCuisine, setFilterCuisine] = useState('All');
+  const [filterProtein, setFilterProtein] = useState('All');
+  const [expandedRecipe, setExpandedRecipe] = useState(null);
+  const [mealsPerDay, setMealsPerDay] = useState(2);
+  const [numPeople, setNumPeople] = useState(2);
+  const [mealPlan, setMealPlan] = useState({});
+  const [shoppingListChecked, setShoppingListChecked] = useState({});
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [cookingDays, setCookingDays] = useState(() => {
+    const initial = {};
+    DAYS.forEach(day => { initial[day] = true; });
+    return initial;
+  });
+
+  const filteredRecipes = useMemo(() => {
+    return RECIPES.filter((recipe) => {
+      const matchesSearch = recipe.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recipe.ingredients.some(ing => ing.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesCategory = filterCategory === 'All' || recipe.category === filterCategory;
+      const matchesCuisine = filterCuisine === 'All' || recipe.cuisine === filterCuisine;
+      const matchesProtein = filterProtein === 'All' || recipe.protein === filterProtein;
+      return matchesSearch && matchesCategory && matchesCuisine && matchesProtein;
+    });
+  }, [searchTerm, filterCategory, filterCuisine, filterProtein]);
+
+  const categories = useMemo(() => ['All', ...new Set(RECIPES.map(r => r.category))], []);
+  const cuisines = useMemo(() => ['All', ...new Set(RECIPES.map(r => r.cuisine))], []);
+  const proteins = useMemo(() => ['All', ...new Set(RECIPES.map(r => r.protein))], []);
+
+  const initializeMealPlan = useCallback(() => {
+    const newPlan = {};
+    DAYS.forEach((day) => {
+      newPlan[day] = Array(mealsPerDay).fill(null);
+    });
+    setMealPlan(newPlan);
+  }, [mealsPerDay]);
+
+  const toggleCookingDay = useCallback((day) => {
+    setCookingDays(prev => ({ ...prev, [day]: !prev[day] }));
+    setMealPlan(prev => ({
+      ...prev,
+      [day]: prev[day]?.map(() => null) || Array(mealsPerDay).fill(null)
+    }));
+  }, [mealsPerDay]);
+
+  const autoFillWeek = useCallback(() => {
+    const newPlan = {};
+    DAYS.forEach((day) => {
+      if (!cookingDays[day]) {
+        newPlan[day] = Array(mealsPerDay).fill(null);
+        return;
+      }
+      const meals = [];
+      for (let i = 0; i < mealsPerDay; i++) {
+        const randomRecipe = filteredRecipes[Math.floor(Math.random() * filteredRecipes.length)];
+        meals.push(randomRecipe);
+      }
+      newPlan[day] = meals;
+    });
+    setMealPlan(newPlan);
+  }, [mealsPerDay, filteredRecipes, cookingDays]);
+
+  const selectRecipe = useCallback((day, mealIndex, recipe) => {
+    setMealPlan(prev => ({
+      ...prev,
+      [day]: prev[day].map((meal, idx) => (idx === mealIndex ? recipe : meal))
+    }));
+  }, []);
+
+  const removeMeal = useCallback((day, mealIndex) => {
+    setMealPlan(prev => ({
+      ...prev,
+      [day]: prev[day].map((meal, idx) => (idx === mealIndex ? null : meal))
+    }));
+  }, []);
+
+  const regenerateMeal = useCallback((day, mealIndex) => {
+    if (filteredRecipes.length > 0) {
+      const randomRecipe = filteredRecipes[Math.floor(Math.random() * filteredRecipes.length)];
+      selectRecipe(day, mealIndex, randomRecipe);
+    }
+  }, [filteredRecipes, selectRecipe]);
+
+  const shoppingList = useMemo(() => {
+    const items = {};
+    Object.values(mealPlan).forEach((meals) => {
+      meals.forEach((meal) => {
+        if (meal) {
+          meal.ingredients.forEach((ingredient) => {
+            const key = ingredient.toLowerCase().replace(/^[\d\/\.\s]+(oz|lb|cup|cups|tbsp|tsp|can|bunch|head|inch|pint|ear|block|ball|stalk|clove|cloves|large|medium|small|pinch|splash)s?\b\s*/i, '').replace(/^\s*of\s+/, '').replace(/,.*$/, '').replace(/\(.*\)/, '').trim();
+            if (key) items[key] = (items[key] || 0) + (numPeople / 2);
+          });
+        }
+      });
+    });
+
+    const sections = {
+      Produce: [],
+      Protein: [],
+      Dairy: [],
+      Pantry: [],
+      'Grains/Pasta': [],
+      Spices: [],
+      Other: [],
+    };
+
+    const produceKeywords = ['carrot', 'onion', 'garlic', 'lettuce', 'greens', 'spinach', 'kale', 'tomato', 'cucumber', 'pepper', 'broccoli', 'cauliflower', 'eggplant', 'squash', 'zucchini', 'radish', 'celery', 'bean', 'pea', 'lemon', 'lime', 'orange', 'apple', 'grape', 'peach', 'mango', 'pineapple', 'mint', 'cilantro', 'parsley', 'basil', 'dill', 'artichoke', 'asparagus', 'turnip', 'mushroom', 'scallion', 'shallot', 'beet', 'cabbage', 'corn', 'snap pea', 'bok choy', 'arugula', 'tomatillo', 'jalape', 'poblano', 'avocado', 'potato', 'sprout', 'brussels', 'herb', 'thyme', 'rosemary', 'lemongrass', 'ginger'];
+    const proteinKeywords = ['chicken', 'beef', 'shrimp', 'salmon', 'fish', 'tofu', 'egg', 'meatball', 'sausage', 'halibut', 'snapper', 'tuna', 'steak', 'chickpea', 'lentil', 'edamame'];
+    const dairyKeywords = ['cheese', 'milk', 'cream', 'yogurt', 'butter', 'ricotta', 'feta', 'parmesan', 'cottage', 'burrata', 'mayo', 'goat cheese'];
+    const grainsKeywords = ['rice', 'pasta', 'noodle', 'quinoa', 'couscous', 'orzo', 'linguine', 'tortilla', 'focaccia', 'breadcrumb', 'oat', 'farro', 'grain', 'pita', 'flatbread', 'tortellini', 'vermicelli', 'rice paper', 'crouton'];
+    const spiceKeywords = ['paprika', 'cumin', 'spice', 'cinnamon', 'curry', 'gochujang', 'harissa', 'sumac', 'zaatar', 'sesame', 'chili', 'red pepper flake', 'turmeric', 'coriander', 'garam masala', 'oregano'];
+
+    Object.entries(items).forEach(([item, qty]) => {
+      const lower = item.toLowerCase();
+      let section = 'Other';
+      if (produceKeywords.some(kw => lower.includes(kw))) section = 'Produce';
+      else if (proteinKeywords.some(kw => lower.includes(kw))) section = 'Protein';
+      else if (dairyKeywords.some(kw => lower.includes(kw))) section = 'Dairy';
+      else if (grainsKeywords.some(kw => lower.includes(kw))) section = 'Grains/Pasta';
+      else if (spiceKeywords.some(kw => lower.includes(kw))) section = 'Spices';
+      else if (lower.includes('oil') || lower.includes('sauce') || lower.includes('vinegar') || lower.includes('honey') || lower.includes('maple') || lower.includes('peanut butter') || lower.includes('tahini') || lower.includes('miso') || lower.includes('pesto') || lower.includes('teriyaki') || lower.includes('fish sauce') || lower.includes('soy sauce') || lower.includes('mirin') || lower.includes('sriracha')) section = 'Pantry';
+      sections[section].push({ item, qty: Math.round(qty * 10) / 10 });
+    });
+
+    return sections;
+  }, [mealPlan, numPeople]);
+
+  const copyShoppingListToClipboard = useCallback(() => {
+    const text = Object.entries(shoppingList)
+      .filter(([_, items]) => items.length > 0)
+      .map(([section, items]) => `${section}:\n${items.map(i => `- ${i.item}${i.qty > 1 ? ` (x${i.qty})` : ''}`).join('\n')}`)
+      .join('\n\n');
+    navigator.clipboard.writeText(text);
+    setCopiedToClipboard(true);
+    setTimeout(() => setCopiedToClipboard(false), 2000);
+  }, [shoppingList]);
+
+  useEffect(() => {
+    initializeMealPlan();
+  }, [mealsPerDay, initializeMealPlan]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-50">
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-white shadow-sm border-b-2 border-amber-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="text-4xl">{'\u{1F37D}\uFE0F'}</div>
+              <h1 className="text-3xl font-bold text-amber-900">Weekly Meal Planner</h1>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Navigation Tabs */}
+      <div className="sticky top-[73px] z-30 bg-white border-b border-amber-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex gap-8">
+            {[
+              { id: 'recipes', label: '\u{1F4D6} Recipes' },
+              { id: 'planner', label: '\u{1F4C5} Planner' },
+              { id: 'shopping', label: '\u{1F6D2} Shopping List' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-6 py-4 font-semibold border-b-2 transition-all ${
+                  activeTab === tab.id
+                    ? 'border-amber-500 text-amber-900'
+                    : 'border-transparent text-gray-600 hover:text-amber-700'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Recipes Tab */}
+        {activeTab === 'recipes' && (
+          <div className="space-y-6">
+            <div className="space-y-4">
+              <div className="relative">
+                <span className="absolute left-4 top-3 text-gray-400 text-lg">{'\u{1F50D}'}</span>
+                <input
+                  type="text"
+                  placeholder="Search recipes or ingredients..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-3 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)}
+                  className="px-4 py-2 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 transition-colors">
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat === 'All' ? 'All Categories' : cat}</option>
+                  ))}
+                </select>
+                <select value={filterCuisine} onChange={(e) => setFilterCuisine(e.target.value)}
+                  className="px-4 py-2 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 transition-colors">
+                  {cuisines.map(c => (
+                    <option key={c} value={c}>{c === 'All' ? 'All Cuisines' : c}</option>
+                  ))}
+                </select>
+                <select value={filterProtein} onChange={(e) => setFilterProtein(e.target.value)}
+                  className="px-4 py-2 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500 transition-colors">
+                  {proteins.map(p => (
+                    <option key={p} value={p}>{p === 'All' ? 'All Proteins' : p}</option>
+                  ))}
+                </select>
+              </div>
+
+              <p className="text-sm text-gray-600">Found {filteredRecipes.length} recipes</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredRecipes.map((recipe) => (
+                <div
+                  key={recipe.id}
+                  className="bg-white border-2 border-amber-200 rounded-lg overflow-hidden hover:shadow-lg hover:border-amber-400 transition-all cursor-pointer"
+                  onClick={() => setExpandedRecipe(expandedRecipe === recipe.id ? null : recipe.id)}
+                >
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-bold text-amber-900 text-lg flex-1">{recipe.name}</h3>
+                      <div className="text-2xl">{CATEGORY_EMOJI[recipe.category] || '\u{1F37D}\uFE0F'}</div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full">{recipe.category}</span>
+                      <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-semibold rounded-full">{recipe.cuisine}</span>
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs font-semibold rounded-full">{recipe.protein}</span>
+                    </div>
+
+                    <div className="flex gap-4 text-sm text-gray-600">
+                      <span>{'\u23F1\uFE0F'} {recipe.prepTime} min</span>
+                      <span>{'\u{1F465}'} {recipe.servings}</span>
+                      <span>{recipe.difficulty}</span>
+                    </div>
+
+                    <div className="text-sm text-gray-700">
+                      <p className="font-semibold mb-2">Key ingredients:</p>
+                      <p className="line-clamp-2">{recipe.ingredients.slice(0, 3).join(', ')}</p>
+                    </div>
+
+                    {expandedRecipe === recipe.id && (
+                      <div className="mt-4 pt-4 border-t-2 border-amber-100 space-y-4">
+                        <div>
+                          <p className="font-semibold text-amber-900 mb-2">All Ingredients:</p>
+                          <ul className="text-sm text-gray-700 space-y-1">
+                            {recipe.ingredients.map((ing, idx) => (
+                              <li key={idx} className="flex items-center gap-2">
+                                <span className="text-amber-500">{'\u2022'}</span> {ing}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        {recipe.instructions && (
+                          <div>
+                            <p className="font-semibold text-amber-900 mb-2">Instructions:</p>
+                            <ol className="text-sm text-gray-700 space-y-2">
+                              {recipe.instructions.map((step, idx) => (
+                                <li key={idx} className="flex gap-3">
+                                  <span className="flex-shrink-0 w-6 h-6 bg-amber-500 text-white rounded-full flex items-center justify-center text-xs font-bold">{idx + 1}</span>
+                                  <span>{step}</span>
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Planner Tab */}
+        {activeTab === 'planner' && (
+          <div className="space-y-6">
+            <div className="bg-white border-2 border-amber-200 rounded-lg p-6 space-y-4">
+              <h2 className="text-xl font-bold text-amber-900">Meal Plan Settings</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Meals per Day</label>
+                  <select value={mealsPerDay} onChange={(e) => setMealsPerDay(Number(e.target.value))}
+                    className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500">
+                    {[1, 2, 3].map(n => (
+                      <option key={n} value={n}>{n} Meal{n > 1 ? 's' : ''} per Day</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Number of People</label>
+                  <select value={numPeople} onChange={(e) => setNumPeople(Number(e.target.value))}
+                    className="w-full px-4 py-2 border-2 border-amber-200 rounded-lg focus:outline-none focus:border-amber-500">
+                    {[1, 2, 3, 4, 5, 6].map(n => (
+                      <option key={n} value={n}>{n} Person{n > 1 ? 's' : ''}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <button onClick={autoFillWeek}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-3 px-6 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all flex items-center justify-center gap-2">
+                {'\u{1F500}'} Auto-fill Week with Random Recipes
+              </button>
+            </div>
+
+            <div className="bg-white border-2 border-amber-200 rounded-lg p-6 space-y-3">
+              <h2 className="text-xl font-bold text-amber-900">Which days are you cooking?</h2>
+              <p className="text-sm text-gray-600">Uncheck days you plan to eat out, have leftovers, or skip cooking.</p>
+              <div className="flex flex-wrap gap-3">
+                {DAYS.map((day) => (
+                  <label key={day}
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-all select-none ${
+                      cookingDays[day]
+                        ? 'border-amber-400 bg-amber-50 text-amber-900'
+                        : 'border-gray-200 bg-gray-50 text-gray-400'
+                    }`}>
+                    <input type="checkbox" checked={cookingDays[day]} onChange={() => toggleCookingDay(day)}
+                      className="w-4 h-4 accent-amber-500 rounded" />
+                    <span className="font-semibold text-sm">{day}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500">
+                {DAYS.filter(d => cookingDays[d]).length} cooking day{DAYS.filter(d => cookingDays[d]).length !== 1 ? 's' : ''} selected
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {DAYS.map((day) => (
+                <div key={day} className={`border-2 rounded-lg overflow-hidden transition-all ${
+                  cookingDays[day] ? 'bg-white border-amber-200' : 'bg-gray-50 border-gray-200 opacity-50'
+                }`}>
+                  <div className={`font-bold p-4 flex items-center justify-between ${
+                    cookingDays[day]
+                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white'
+                      : 'bg-gray-300 text-gray-600'
+                  }`}>
+                    <span>{day}</span>
+                    {!cookingDays[day] && <span className="text-sm font-normal italic">Not cooking</span>}
+                  </div>
+                  {cookingDays[day] && <div className="p-4 space-y-3">
+                    {mealPlan[day]?.map((meal, idx) => (
+                      <div key={idx} className="flex gap-3 items-center">
+                        <span className="text-sm font-semibold text-gray-600 min-w-fit">Meal {idx + 1}:</span>
+                        <div className="flex-1">
+                          {meal ? (
+                            <div className="bg-amber-50 border-2 border-amber-300 rounded p-3 flex items-center justify-between">
+                              <span className="font-semibold text-amber-900">{meal.name}</span>
+                              <div className="flex gap-2">
+                                <button onClick={() => regenerateMeal(day, idx)}
+                                  className="p-2 hover:bg-amber-200 rounded transition-colors" title="Swap this meal">
+                                  {'\u{1F504}'}
+                                </button>
+                                <button onClick={() => removeMeal(day, idx)}
+                                  className="p-2 hover:bg-red-200 rounded transition-colors" title="Remove this meal">
+                                  {'\u2715'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <select
+                              onChange={(e) => {
+                                const recipe = RECIPES.find(r => r.id === Number(e.target.value));
+                                if (recipe) selectRecipe(day, idx, recipe);
+                              }}
+                              className="w-full px-3 py-2 border-2 border-amber-300 rounded bg-white text-gray-700 focus:outline-none focus:border-amber-500"
+                              defaultValue="">
+                              <option value="">Select a recipe...</option>
+                              {RECIPES.map(recipe => (
+                                <option key={recipe.id} value={recipe.id}>{recipe.name}</option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Shopping List Tab */}
+        {activeTab === 'shopping' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-amber-900">Shopping List</h2>
+              <button onClick={copyShoppingListToClipboard}
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:from-amber-600 hover:to-orange-600 transition-all">
+                {copiedToClipboard ? '\u2713 Copied!' : '\u{1F4CB} Copy to Clipboard'}
+              </button>
+            </div>
+
+            {Object.values(mealPlan).every(meals => meals.every(m => m === null)) ? (
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-8 text-center">
+                <p className="text-amber-900 font-semibold text-lg">No meals planned yet!</p>
+                <p className="text-gray-600 mt-2">Go to the Planner tab to create your meal plan.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {Object.entries(shoppingList)
+                  .filter(([_, items]) => items.length > 0)
+                  .map(([section, items]) => (
+                    <div key={section} className="bg-white border-2 border-amber-200 rounded-lg p-6">
+                      <h3 className="text-lg font-bold text-amber-900 mb-4">{section}</h3>
+                      <ul className="space-y-2">
+                        {items.map((item, idx) => (
+                          <li key={idx} className="flex items-center gap-3">
+                            <input type="checkbox"
+                              checked={shoppingListChecked[`${section}-${idx}`] || false}
+                              onChange={(e) => {
+                                setShoppingListChecked(prev => ({
+                                  ...prev, [`${section}-${idx}`]: e.target.checked
+                                }));
+                              }}
+                              className="w-5 h-5 rounded border-2 border-amber-300 text-amber-500 cursor-pointer" />
+                            <span className={`flex-1 ${shoppingListChecked[`${section}-${idx}`] ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                              {item.item} {item.qty > 1 ? `(x${item.qty})` : ''}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<MealPlanner />);
+  </script>
+</body>
+</html>
